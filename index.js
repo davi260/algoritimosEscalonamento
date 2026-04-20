@@ -22,22 +22,22 @@ function popularAleatoriamente(quantidade) {
 
 async function popularManualmente(quantidade) {
     let novosProcessos = [];
-
+    let numeroProcesso=0
     for (let i = 0; i < quantidade; i++) {
         console.log(`\n--- Configurando Processo [${i}] ---`);
         
-        let num = await input({ message: "Número do Processo: " });
         let exec = await input({ message: "Tempo de Execução: " });
         let cheg = await input({ message: "Tempo de Chegada: " });
         let prio = await input({ message: "Prioridade: " });
 
         novosProcessos.push({
-            numeroProcesso: parseInt(num),
+            numeroProcesso: numeroProcesso,
             tempoExecucao: parseInt(exec),
             tempoRestante: parseInt(exec), 
             tempoChegada: parseInt(cheg),
             prioridade: parseInt(prio)
         });
+        numeroProcesso++
     }
     return novosProcessos;
 }
@@ -75,6 +75,58 @@ function fcfs(processos) {
     console.log(`Tempo médio de espera: ${media}`)
 }
 
+function sjfNaoPreemptivo(processos) {
+    // Clona para não mexer na lista original
+    let pendentes = processos.map(p => ({ ...p }));
+    let tempoSistema = 0;   // Controla a sincronia com o tempo de chegada
+    let passoExecucao = 0;  // O número que aparece no log tempo[...]
+    let acumuladorEspera = 0;
+    let saidaEspera = [];
+
+    console.log(`\n--- Executando SJF Não-Preemptivo ---`);
+
+    while (pendentes.length > 0) {
+        // 1. Filtra processos que já chegaram no tempo do sistema
+        let disponiveis = pendentes.filter(p => p.tempoChegada <= tempoSistema);
+
+        if (disponiveis.length === 0) {
+            // Se ninguém chegou, o sistema "avança" para a chegada do próximo
+            let proximoChegada = Math.min(...pendentes.map(p => p.tempoChegada));
+            tempoSistema = proximoChegada;
+            
+            // Re-filtra após o salto
+            disponiveis = pendentes.filter(p => p.tempoChegada <= tempoSistema);
+        }
+
+        // 2. Escolhe o menor (SJF)
+        disponiveis.sort((a, b) => a.tempoExecucao - b.tempoExecucao);
+        let escolhido = disponiveis[0];
+
+        // 3. Cálculo de espera baseado no relógio do sistema
+        let esperaDesteProcesso = tempoSistema - escolhido.tempoChegada;
+        acumuladorEspera += esperaDesteProcesso;
+        saidaEspera.push(`Processo[${escolhido.numeroProcesso}]: tempo_espera=${esperaDesteProcesso}`);
+
+        // 4. Execução: Imprime usando o passoExecucao
+        let tempoProcesso = escolhido.tempoExecucao;
+        while (tempoProcesso > 0) {
+            tempoProcesso--;
+            tempoSistema++;   // O sistema continua correndo
+            passoExecucao++;  // O contador da tela sobe apenas na execução
+            console.log(`tempo[${passoExecucao}]: processo[${escolhido.numeroProcesso}] restante=${tempoProcesso}`);
+        }
+
+        // 5. Remove o processo concluído
+        pendentes = pendentes.filter(p => p.numeroProcesso !== escolhido.numeroProcesso);
+    }
+
+    console.log(`\n`);
+    saidaEspera.forEach(linha => console.log(linha));
+    
+    let media = acumuladorEspera / processos.length;
+    console.log(`Tempo médio de espera: ${media.toFixed(2)}`);
+}
+
 
 let aleatorio = await input({message: `Será aleatório? (s/n)` });
 if (aleatorio == "s") {
@@ -99,6 +151,9 @@ processos\n8=Popular processos novamente\n9=Sair\n` });
     }
     else if (algoritimo == "1") {
         fcfs(processos)
+    }
+    else if (algoritimo == "3") {
+        sjfNaoPreemptivo(processos)
     }
     else if (algoritimo == "7") {
         for (let i = 0; i < processos.length; i++) {
