@@ -77,47 +77,52 @@ function fcfs(processos) {
 
 function sjfNaoPreemptivo(processos) {
     let pendentes = processos.map(p => ({ ...p }));
-    let tempoSistema = 0;   // Controla a sincronia com o tempo de chegada
-    let passoExecucao = 0;  // O número que aparece no log tempo[...]
-    let acumuladorEspera = 0;
-    let saidaEspera = [];
+    let tempoSistema = 0;
+    let passoExecucao = 0;
+    let somaEsperaTotal = 0; 
+    let resultadosFinalizados = []; 
 
     console.log(`\n--- Executando SJF Não-Preemptivo ---`);
 
     while (pendentes.length > 0) {
-        //Filtra processos que já chegaram no tempo do sistema
         let disponiveis = pendentes.filter(p => p.tempoChegada <= tempoSistema);
 
         if (disponiveis.length === 0) {
-            // Se ninguém chegou, o sistema "avança" para a chegada do próximo
             let proximoChegada = Math.min(...pendentes.map(p => p.tempoChegada));
             tempoSistema = proximoChegada;
             disponiveis = pendentes.filter(p => p.tempoChegada <= tempoSistema);
         }
 
-        // Escolhe o menor 
         disponiveis.sort((a, b) => a.tempoExecucao - b.tempoExecucao);
         let escolhido = disponiveis[0];
 
-        // Calculo de espera 
-        let esperaDesteProcesso = tempoSistema - escolhido.tempoChegada;
-        acumuladorEspera += esperaDesteProcesso;
-        saidaEspera.push(`Processo[${escolhido.numeroProcesso}]: tempo_espera=${esperaDesteProcesso}`);
+        // Calculo de espera
+        let espera = tempoSistema - escolhido.tempoChegada;
+        escolhido.tempoEspera = espera;
+        somaEsperaTotal += espera;
 
+        // Execução
         let tempoProcesso = escolhido.tempoExecucao;
         while (tempoProcesso > 0) {
             tempoProcesso--;
-            tempoSistema++;   // continua correndo
-            passoExecucao++;  // contador da tela 
+            tempoSistema++;
+            passoExecucao++;
             console.log(`tempo[${passoExecucao}]: processo[${escolhido.numeroProcesso}] restante=${tempoProcesso}`);
         }
+
+        // Salvar o processo finalizado e remover dos pendentes
+        resultadosFinalizados.push(escolhido);
         pendentes = pendentes.filter(p => p.numeroProcesso !== escolhido.numeroProcesso);
     }
 
     console.log(`\n`);
-    saidaEspera.forEach(linha => console.log(linha));
+    resultadosFinalizados.sort((a, b) => a.numeroProcesso - b.numeroProcesso);
     
-    let media = acumuladorEspera / processos.length;
+    resultadosFinalizados.forEach(p => {
+        console.log(`Processo[${p.numeroProcesso}]: tempo_espera=${p.tempoEspera}`);
+    });
+
+    let media = somaEsperaTotal / processos.length;
     console.log(`Tempo médio de espera: ${media.toFixed(2)}`);
 }
 
@@ -153,9 +158,8 @@ function sjfPreemptivo(processos) {
 
         console.log(`tempo[${passoExecucao}]: processo[${escolhido.numeroProcesso}] restante=${escolhido.tempoRestante}`);
 
-        // 4. Se o processo terminou agora
         if (escolhido.tempoRestante === 0) {
-            // Cálculo da espera: TempoFim - TempoChegada - TempoExecuçãoTotal
+            // Calculo da espera: TempoFim - TempoChegada - TempoExecuçãoTotal
             let original = processos.find(p => p.numeroProcesso === escolhido.numeroProcesso);
             let espera = tempoSistema - escolhido.tempoChegada - original.tempoExecucao;
             
