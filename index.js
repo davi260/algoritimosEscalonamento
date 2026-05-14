@@ -173,8 +173,99 @@ function sjfPreemptivo(processos) {
     finalizados.sort((a, b) => a.numeroProcesso - b.numeroProcesso).forEach(p => {
         console.log(`Processo[${p.numeroProcesso}]: tempo_espera=${p.tempoEspera}`);
     });
-    //toFixed(2) para definir casas decimais 
+    //toFixed() para definir casas decimais 
     console.log(`Tempo médio de espera: ${(somaEspera / totalProcessos).toFixed(2)}`);
+}
+
+function prioridadePreemptivo(processos) {
+    let pendentes = processos.map(p => ({ ...p }));
+    let tempoSistema = 0;
+    let passoExecucao = 0;
+    let somaEspera = 0;
+    let totalProcessos = processos.length;
+    let finalizados = [];
+
+    console.log(`\n--- Executando Prioridade Preemptivo ---`);
+
+    while (finalizados.length < totalProcessos) {
+        let disponiveis = pendentes.filter(p => p.tempoChegada <= tempoSistema && p.tempoRestante > 0);
+
+        if (disponiveis.length === 0) {
+            tempoSistema++;
+            passoExecucao++;
+            continue;
+        }
+
+        // Ordena por prioridade 
+        disponiveis.sort((a, b) => a.prioridade - b.prioridade);
+        let escolhido = disponiveis[0];
+
+        escolhido.tempoRestante--;
+        tempoSistema++;
+        passoExecucao++;
+
+        console.log(`tempo[${passoExecucao}]: processo[${escolhido.numeroProcesso}] restante=${escolhido.tempoRestante}`);
+
+        if (escolhido.tempoRestante === 0) {
+            let original = processos.find(p => p.numeroProcesso === escolhido.numeroProcesso);
+            let espera = tempoSistema - escolhido.tempoChegada - original.tempoExecucao;
+            
+            escolhido.tempoEspera = espera;
+            somaEspera += espera;
+            finalizados.push(escolhido);
+        }
+    }
+
+    console.log(`\n`);
+    finalizados.sort((a, b) => a.numeroProcesso - b.numeroProcesso).forEach(p => {
+        console.log(`Processo[${p.numeroProcesso}]: tempo_espera=${p.tempoEspera}`);
+    });
+    console.log(`Tempo médio de espera: ${(somaEspera / totalProcessos).toFixed(2)}`);
+}
+
+function prioridadeNaoPreemptivo(processos) {
+    let pendentes = processos.map(p => ({ ...p }));
+    let tempoSistema = 0;
+    let passoExecucao = 0;
+    let somaEsperaTotal = 0;
+    let resultadosFinalizados = [];
+
+    console.log(`\n--- Executando Prioridade Não-Preemptivo ---`);
+
+    while (pendentes.length > 0) {
+        let disponiveis = pendentes.filter(p => p.tempoChegada <= tempoSistema);
+
+        if (disponiveis.length === 0) {
+            tempoSistema++;
+            passoExecucao++;
+            continue;
+        }
+
+        // Ordena por prioridade 
+        disponiveis.sort((a, b) => a.prioridade - b.prioridade);
+        let escolhido = disponiveis[0];
+
+        let espera = tempoSistema - escolhido.tempoChegada;
+        escolhido.tempoEspera = espera;
+        somaEsperaTotal += espera;
+
+        let tempoProcesso = escolhido.tempoExecucao;
+        while (tempoProcesso > 0) {
+            tempoProcesso--;
+            tempoSistema++;
+            passoExecucao++;
+            console.log(`tempo[${passoExecucao}]: processo[${escolhido.numeroProcesso}] restante=${tempoProcesso}`);
+        }
+
+        resultadosFinalizados.push(escolhido);
+        pendentes = pendentes.filter(p => p.numeroProcesso !== escolhido.numeroProcesso);
+    }
+
+    console.log(`\n`);
+    resultadosFinalizados.sort((a, b) => a.numeroProcesso - b.numeroProcesso).forEach(p => {
+        console.log(`Processo[${p.numeroProcesso}]: tempo_espera=${p.tempoEspera}`);
+    });
+    console.log(`Tempo médio de espera: ${(somaEsperaTotal / processos.length).toFixed(2)}`);
 }
 
 
@@ -207,6 +298,12 @@ processos\n8=Popular processos novamente\n9=Sair\n` });
     }
     else if (algoritimo == "3") {
         sjfNaoPreemptivo(processos)
+    }
+    else if (algoritimo == "4") {
+        prioridadePreemptivo(processos);
+    }
+    else if (algoritimo == "5") {
+        prioridadeNaoPreemptivo(processos);
     }
     else if (algoritimo == "7") {
         for (let i = 0; i < processos.length; i++) {
